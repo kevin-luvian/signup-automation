@@ -5,6 +5,8 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import fs from 'fs';
 import { format } from 'date-fns';
 
+const SCRAPE_OPS_API_KEY = process.env.SCRAPE_OPS_API_KEY;
+
 interface PuppeteerNavigatorOptions {
     headless?: boolean;
     useStealth?: boolean;
@@ -24,11 +26,24 @@ class PuppeteerNavigator {
         if (opts.useStealth ?? true) {
             puppeteer.use(StealthPlugin())
         }
+        const launchArgs = [
+            '--start-fullscreen',
+            '--start-maximized',
+        ];
+        // launchArgs.push('--proxy-server=http://residential-proxy.scrapeops.io:8181');
+        // Set up proxy authentication
+        // await page.authenticate({
+        //     username: 'scrapeops.sticky_session=10000',
+        //     password: SCRAPE_OPS_API_KEY!,
+        // });
+
         const browser = await puppeteer.launch({
             headless: opts.headless ?? false,
-            args: ['--start-fullscreen', '--start-maximized'],
+            devtools: false,
+            args: launchArgs,
         });
         const page = (await browser.pages())[0];
+
         return new PuppeteerNavigator(browser, page);
     }
 
@@ -45,6 +60,24 @@ class PuppeteerNavigator {
                 request.continue();
             }
         });
+    }
+
+    async moveMouseRandomly(times: number = 3, delay: number = 300) {
+        const viewport = this.page.viewport() || { width: 1280, height: 800 };
+        for (let i = 0; i < times; i++) {
+            // Pick a random area within the screen for this move
+            const areaWidth = Math.floor(Math.random() * (viewport.width / 2)) + 100;
+            const areaHeight = Math.floor(Math.random() * (viewport.height / 2)) + 100;
+            const minX = Math.floor(Math.random() * (viewport.width - areaWidth));
+            const minY = Math.floor(Math.random() * (viewport.height - areaHeight));
+            const maxX = minX + areaWidth;
+            const maxY = minY + areaHeight;
+
+            const x = Math.floor(Math.random() * (maxX - minX)) + minX;
+            const y = Math.floor(Math.random() * (maxY - minY)) + minY;
+            await this.page.mouse.move(x, y, { steps: 5 });
+            await this.sleep(delay);
+        }
     }
 
     async changePage(url: string, timeout: number = 60000): Promise<void> {
@@ -133,9 +166,9 @@ class PuppeteerNavigator {
 
         await element.evaluate((el) => {
             el.originalStyle = el.style.cssText;
-            el.style.border = '2px solid red';
+            el.style.border = '2px solid green';
             el.style.transition = 'border 0.5s ease-in-out';
-            el.style.boxShadow = '0 0 10px red';
+            el.style.boxShadow = '0 0 10px green';
         });
 
         this.highlightedElement = element;

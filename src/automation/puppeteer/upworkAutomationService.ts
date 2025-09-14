@@ -16,13 +16,53 @@ class UpworkAutomationService {
         }
     }
 
+    async gotoCheckPage() {
+        try {
+            await this.navigator.changePage('https://bot.sannysoft.com/', 10000);
+            await this.navigator.randomSleep(500, 3000);
+        } catch (error) {
+            await this.navigator.logPage(this.basePathError, 'navigate_check_page');
+            console.error('Error going to check page');
+        }
+        await this.navigator.sleep(1000000)
+    }
+
+    async gotoHomePage() {
+        try {
+            await this.navigator.changePage('https://www.upwork.com/', 10000);
+            await this.navigator.randomSleep(500, 3000);
+        } catch (error) {
+            await this.navigator.logPage(this.basePathError, 'navigate_home_page');
+            console.error('Error going to home page');
+        }
+    }
+
     async gotoLoginPage() {
         try {
-            await this.navigator.changePage('https://www.upwork.com/ab/account-security/login');
+            await this.navigator.changePage('https://www.upwork.com/ab/account-security/login', 100000);
             await this.navigator.randomSleep(500, 3000);
         } catch (error) {
             await this.navigator.logPage(this.basePathError, 'navigate_login_page');
             console.error('Error going to login page');
+            throw error;
+        }
+    }
+
+    async gotoLogoutPage() {
+        try {
+            await this.navigator.changePage('https://www.upwork.com/ab/account-security/logout', 100000);
+            await this.navigator.randomSleep(500, 3000);
+
+            const buttonLogout = await this.navigator.waitForSelector('button::-p-text("Log Out")');
+            if (!buttonLogout) {
+                await this.navigator.logPage(this.basePathError, 'button_logout');
+                throw new Error('Log out button not found');
+            }
+            await buttonLogout.click();
+            await this.navigator.randomSleep(500, 3000);
+        } catch (error) {
+            await this.navigator.logPage(this.basePathError, 'navigate_logout_page');
+            console.error('Error going to logout page');
             throw error;
         }
     }
@@ -36,6 +76,22 @@ class UpworkAutomationService {
             console.error('Error going to create profile page');
             throw error;
         }
+    }
+
+    async retry(fn: () => Promise<void>, retries: number = 3, delayMs: number = 10000): Promise<void> {
+        let lastError: any;
+        for (let attempt = 0; attempt < retries; attempt++) {
+            try {
+                await fn();
+                return;
+            } catch (error) {
+                lastError = error;
+                if (attempt < retries - 1) {
+                    await this.navigator.sleep(delayMs);
+                }
+            }
+        }
+        throw lastError;
     }
 
     async login(email: string, password: string) {
@@ -75,12 +131,14 @@ class UpworkAutomationService {
         }
         await buttonLogIn.click();
 
-        await this.navigator.sleep(3000);
+        await this.navigator.sleep(500);
         await this.navigator.page.waitForNavigation({ waitUntil: 'load' });
         await this.navigator.sleep(3000);
     }
 
     async gettingStartedProfile() {
+        await this.navigator.moveMouseRandomly();
+
         const buttonGetStarted = await this.navigator.waitForSelector("::-p-xpath(//button[normalize-space()='Get started'])");
         if (!buttonGetStarted) {
             await this.navigator.logPage(this.basePathError, 'button_get_started');
@@ -125,9 +183,10 @@ class UpworkAutomationService {
         await buttonNext.click({ delay: 500 });
         await this.navigator.sleep(3000);
 
-        const toGetOpportunitiesInput = await this.navigator.waitForSelector(
+        const toGetOpportunitiesInput = await this.navigator.waitForSelectors([
             "::-p-xpath(//div[@data-qa='button-box' and contains(., 'I’d like to find opportunities myself')])",
-        )
+            "::-p-xpath(//div[@data-qa='button-box' and contains(., 'find opportunities')])",
+        ])
         if (!toGetOpportunitiesInput) {
             await this.navigator.logPage(this.basePathError, 'to_get_opportunities_input');
             throw new Error('To get opportunities input not found');
@@ -148,6 +207,8 @@ class UpworkAutomationService {
     }
 
     async fillProfile(account: Account) {
+        await this.navigator.moveMouseRandomly();
+
         const buttonFilloutManual = await this.navigator.waitForSelector(
             "::-p-xpath(//button[contains(., 'Fill out manually')])"
         )
@@ -220,6 +281,8 @@ class UpworkAutomationService {
     }
 
     async fillExperience(account: Account) {
+        await this.navigator.moveMouseRandomly();
+
         const experienceInput = await this.navigator.getAriaLabelledby(
             `::-p-xpath(//h4[contains(., 'Add experience')])`
         );
@@ -354,6 +417,8 @@ class UpworkAutomationService {
 
 
     async fillEducation(account: Account) {
+        await this.navigator.moveMouseRandomly();
+
         const educationInput = await this.navigator.getAriaLabelledby(
             `::-p-xpath(//h4[contains(., 'Add education')])`
         );
@@ -508,6 +573,8 @@ class UpworkAutomationService {
     }
 
     async fillLanguageProficiency() {
+        await this.navigator.moveMouseRandomly();
+
         const languageProficiencyInput = await this.navigator.getAriaLabelledby(
             `::-p-xpath(//label[contains(., 'Proficiency')])`
         );
@@ -544,6 +611,8 @@ class UpworkAutomationService {
     }
 
     async fillBioDescription(account: Account) {
+        await this.navigator.moveMouseRandomly();
+
         const bioDescriptionInput = await this.navigator.waitForSelectors([
             `::-p-xpath(//textarea[@aria-labelledby='overview-label'])`,
             `::-p-xpath(//textarea)`,
@@ -569,6 +638,8 @@ class UpworkAutomationService {
     }
 
     async fillHourlyRate() {
+        await this.navigator.moveMouseRandomly();
+
         const hourlyInput = await this.navigator.waitForSelectors([
             `::-p-xpath(
                 (//div[contains(., "Hourly rate")])[last()-1] 
@@ -597,6 +668,8 @@ class UpworkAutomationService {
     }
 
     async fillPersonalInformation(account: Account, photoPath: string) {
+        await this.navigator.moveMouseRandomly();
+
         const dateOfBirthLabel = await this.navigator.waitForSelector(
             `::-p-xpath(//label[contains(., 'Date of Birth')])`
         );
@@ -606,7 +679,8 @@ class UpworkAutomationService {
         }
 
         const buttonUploadPhoto = await this.navigator.waitForSelectors([
-            `::-p-xpath(//button[contains(., 'Edit photo')])`
+            `::-p-xpath(//button[contains(., 'Upload photo')])`,
+            `::-p-xpath(//button[contains(., 'Edit photo')])`,
         ]);
         if (!buttonUploadPhoto) {
             await this.navigator.logPage(this.basePathError, 'button_upload_photo');
@@ -719,6 +793,22 @@ class UpworkAutomationService {
             await searchAddressInput.click({ delay: 500 });
             await searchAddressInput.type(account.address, { delay: 100 });
             await this.navigator.sleep(1000);
+
+            const searchAddressContainer = await this.navigator.waitForSelectors([
+                `::-p-xpath(//label[contains(., 'Street address')]/parent::div)`,
+                `::-p-xpath(//div[@data-qa="input-address"]/parent::div)`
+            ]);
+            if (!searchAddressContainer) {
+                await this.navigator.logPage(this.basePathError, 'search_address_container');
+                throw new Error('Search address container not found');
+            }
+
+            const searchAddressOption = await searchAddressContainer.$("::-p-xpath(.//li[@role='option'][1])");
+            if (searchAddressOption) {
+                await searchAddressOption.click({ delay: 500 });
+            }
+
+            await this.navigator.sleep(2000);
             await dateOfBirthLabel.click({ delay: 500 });
         }
 
@@ -726,13 +816,22 @@ class UpworkAutomationService {
             const cityContainer = await this.navigator.waitForSelector(`
                 ::-p-xpath(//label[contains(., 'City')]/parent::div)
             `);
+
+            const clearInputButton = await cityContainer!.$("::-p-xpath(.//button[contains(.,'Clear Input')])");
+            if (clearInputButton) {
+                await this.navigator.highlightElement(clearInputButton);
+                await clearInputButton.click({ delay: 500 });
+                await this.navigator.sleep(1000);
+            }
+
             const cityInput = await cityContainer!.$("::-p-xpath(.//input)");
             if (!cityInput) {
                 await this.navigator.logPage(this.basePathError, 'city_input');
                 throw new Error('City input not found');
             }
             await this.navigator.highlightElement(cityInput);
-            await cityInput.click({ delay: 500 });
+            await cityInput.click({ count: 3, delay: 100 });
+            await this.navigator.page.keyboard.press('Backspace');
             await cityInput.type(account.city, { delay: 100 });
             await this.navigator.sleep(1000);
 
@@ -747,6 +846,16 @@ class UpworkAutomationService {
         }
 
         {
+            const postalCodeContainer = await this.navigator.waitForSelector(`
+                ::-p-xpath(//label[contains(., 'Postal code')]/parent::div)
+            `);
+            const clearInputButton = await postalCodeContainer!.$("::-p-xpath(.//button[contains(.,'Clear Input')])");
+            if (clearInputButton) {
+                await this.navigator.highlightElement(clearInputButton);
+                await clearInputButton.click({ delay: 500 });
+                await this.navigator.sleep(1000);
+            }
+
             const postalCodeInput = await this.navigator.waitForSelector(`
                 ::-p-xpath(//label[contains(., 'Postal code')]/parent::div//input)
             `);
@@ -779,8 +888,22 @@ class UpworkAutomationService {
             await this.navigator.logPage(this.basePathError, 'button_review');
             throw new Error('Button review not found');
         }
-
+        await buttonReview.click({ delay: 500 });
         await this.navigator.sleep(3000);
+    }
+
+    async submitProfile() {
+        await this.navigator.moveMouseRandomly();
+
+        const buttonSubmit = await this.navigator.waitForSelector(`
+            ::-p-xpath(//button[contains(., 'Submit profile')])
+        `);
+        if (!buttonSubmit) {
+            await this.navigator.logPage(this.basePathError, 'button_submit');
+            throw new Error('Button submit not found');
+        }
+        await buttonSubmit.click({ delay: 500 });
+        await this.navigator.sleep(7000);
     }
 }
 

@@ -1,4 +1,5 @@
 export interface Account {
+    skip: boolean;
     email: string;
     password: string;
     first_name: string;
@@ -25,6 +26,7 @@ export interface Account {
 
 export function parseAccount(row: any): Account {
     return {
+        skip: row.skip === 'true',
         email: row.email || '',
         password: row.password || '',
         first_name: row.first_name || '',
